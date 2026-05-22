@@ -280,12 +280,21 @@ function createAdmin(array $data, string $privatePath): array {
         return ['success' => false, 'message' => '.env file not found. Complete database setup first.'];
     }
     
-    // Parse .env to get DB credentials
-    $env = parse_ini_file($envFile);
+    // Parse .env manually (parse_ini_file breaks on ${} syntax)
+    $env = [];
+    $lines = file($envFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+    foreach ($lines as $line) {
+        if (strpos(trim($line), '#') === 0) continue;
+        if (strpos($line, '=') === false) continue;
+        list($key, $value) = explode('=', $line, 2);
+        $key = trim($key);
+        $value = trim($value, " \t\n\r\0\x0B\"'");
+        $env[$key] = $value;
+    }
     
     try {
-        $dsn = "mysql:host={$env['DB_HOST']};port={$env['DB_PORT']};dbname={$env['DB_DATABASE']}";
-        $pdo = new PDO($dsn, $env['DB_USERNAME'], $env['DB_PASSWORD']);
+        $dsn = "mysql:host=" . ($env['DB_HOST'] ?? 'localhost') . ";port=" . ($env['DB_PORT'] ?? '3306') . ";dbname=" . ($env['DB_DATABASE'] ?? '');
+        $pdo = new PDO($dsn, $env['DB_USERNAME'] ?? '', $env['DB_PASSWORD'] ?? '');
         $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
         
         $password = password_hash($data['password'], PASSWORD_BCRYPT);
@@ -299,15 +308,19 @@ function createAdmin(array $data, string $privatePath): array {
             $stmt->execute([$data['name'], $data['email'], $password]);
             $userId = $pdo->lastInsertId();
             
-            // Assign super-admin role
-            $roleId = $pdo->query("SELECT id FROM roles WHERE slug = 'super-admin' LIMIT 1")->fetchColumn();
-            if ($roleId) {
-                $pdo->prepare("INSERT INTO user_role (user_id, role_id) VALUES (?, ?)")->execute([$userId, $roleId]);
+            // Assign super-admin role (skip if roles table doesn't exist)
+            if (in_array('roles', $tables)) {
+                $roleId = $pdo->query("SELECT id FROM roles WHERE slug = 'super-admin' LIMIT 1")->fetchColumn();
+                if ($roleId && in_array('user_role', $tables)) {
+                    $pdo->prepare("INSERT INTO user_role (user_id, role_id) VALUES (?, ?)")->execute([$userId, $roleId]);
+                }
             }
             
             return ['success' => true, 'message' => "Admin account created! Email: {$data['email']}"];
         } else {
-            return ['success' => false, 'message' => 'Users table not found. Please run migrations first via yourdomain.com/install'];
+            // Tables don't exist - migrations didn't run. Show what tables ARE available
+            $tableList = empty($tables) ? 'No tables found (database is empty)' : 'Found tables: ' . implode(', ', array_slice($tables, 0, 10));
+            return ['success' => false, 'message' => "Users table not found. {$tableList}. Migrations may not have run. Visit yourdomain.com/install to run them, or contact support."];
         }
         
     } catch (PDOException $e) {
