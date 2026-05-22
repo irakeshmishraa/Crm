@@ -357,13 +357,38 @@ function finalize(string $privatePath, string $publicPath): array {
 // ========== UTILITY FUNCTIONS ==========
 
 function findLaravelRoot(string $dir): ?string {
+    // Check current dir
     if (file_exists($dir . '/artisan')) return $dir;
+    if (file_exists($dir . '/composer.json') && is_dir($dir . '/app')) return $dir;
+    
+    // Check one level deep (GitHub ZIP extracts to a subfolder like Crm-main/)
     $items = scandir($dir);
     foreach ($items as $item) {
         if ($item === '.' || $item === '..') continue;
         $path = $dir . '/' . $item;
-        if (is_dir($path) && file_exists($path . '/artisan')) return $path;
+        if (is_dir($path)) {
+            if (file_exists($path . '/artisan')) return $path;
+            if (file_exists($path . '/composer.json') && is_dir($path . '/app')) return $path;
+        }
     }
+    
+    // Check two levels deep (in case ZIP has extra nesting)
+    foreach ($items as $item) {
+        if ($item === '.' || $item === '..') continue;
+        $path = $dir . '/' . $item;
+        if (is_dir($path)) {
+            $subItems = scandir($path);
+            foreach ($subItems as $subItem) {
+                if ($subItem === '.' || $subItem === '..') continue;
+                $subPath = $path . '/' . $subItem;
+                if (is_dir($subPath)) {
+                    if (file_exists($subPath . '/artisan')) return $subPath;
+                    if (file_exists($subPath . '/composer.json') && is_dir($subPath . '/app')) return $subPath;
+                }
+            }
+        }
+    }
+    
     return null;
 }
 
