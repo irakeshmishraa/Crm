@@ -12,7 +12,7 @@ class InstallController extends Controller
 {
     public function index() { if (file_exists(storage_path('installed'))) return redirect('/login'); return view('install.index'); }
     public function requirements() {
-        $reqs = ['PHP >= 8.2' => version_compare(PHP_VERSION, '8.2.0', '>='), 'BCMath' => extension_loaded('bcmath'), 'JSON' => extension_loaded('json'), 'Mbstring' => extension_loaded('mbstring'), 'OpenSSL' => extension_loaded('openssl'), 'PDO MySQL' => extension_loaded('pdo_mysql'), 'Curl' => extension_loaded('curl'), 'GD' => extension_loaded('gd'), 'Storage Writable' => is_writable(storage_path())];
+        $reqs = ['PHP >= 8.0' => version_compare(PHP_VERSION, '8.0.0', '>='), 'BCMath' => extension_loaded('bcmath'), 'JSON' => extension_loaded('json'), 'Mbstring' => extension_loaded('mbstring'), 'OpenSSL' => extension_loaded('openssl'), 'PDO MySQL' => extension_loaded('pdo_mysql'), 'Curl' => extension_loaded('curl'), 'GD' => extension_loaded('gd'), 'Storage Writable' => is_writable(storage_path())];
         return view('install.requirements', ['requirements' => $reqs, 'allPassed' => !in_array(false, $reqs)]);
     }
     public function database() { return view('install.database'); }

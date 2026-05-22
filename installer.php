@@ -72,7 +72,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 function checkRequirements(): array {
     $checks = [
-        'PHP Version >= 8.2' => version_compare(PHP_VERSION, '8.2.0', '>='),
+        'PHP Version >= 8.0' => version_compare(PHP_VERSION, '8.0.0', '>='),
         'PDO Extension' => extension_loaded('pdo'),
         'PDO MySQL' => extension_loaded('pdo_mysql'),
         'Mbstring Extension' => extension_loaded('mbstring'),
